@@ -46,44 +46,49 @@ class Controller(object):
             controller.table_set_default("ecmp_group_to_nhop", "drop", [])
 
     def route(self):
-        ecmp_grps = {sw: {} for sw in self.topo.get_p4rtswitches().keys()}
-        for sw_src, controller in self.controllers.items():
-            for sw_dst in self.topo.get_p4switches():
-                if (sw_src == sw_dst):
-                    hosts = self.topo.get_hosts_connected_to(sw_dst)
-                    for host in hosts:
-                        sw_port = self.topo.node_to_node_port_num(sw_dst, host)
-                        host_ip = self.topo.get_host_ip(host) + '/32'
-                        host_mac = self.topo.get_host_mac(host)
-
-                        controller.table_add('ipv4_lpm', 'set_nhop', [host_ip], [host_mac, str(sw_port)])
-                else:
-                    hosts = self.topo.get_hosts_connected_to(sw_dst)
-                    if (len(hosts) > 0):
-                        paths = self.topo.get_shortest_paths_between_nodes(sw_src, sw_dst)
-                        if (len(paths) == 1):
-                            next_hop = paths[0][1]
-                            subnet = self.topo.get_host_ip(hosts[0]) + '/24'
-                            sw_port = self.topo.node_to_node_port_num(sw_src, next_hop)
-                            next_hop_mac = self.topo.node_to_node_mac(next_hop, sw_src)
-                            controller.table_add('ipv4_lpm', 'set_nhop', [subnet], [next_hop_mac, str(sw_port)])
-                        elif (len(paths) > 1):
-                            next_hops = [x[1] for x in paths]
-                            next_hop_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_src),
-                                                    self.topo.node_to_node_port_num(sw_src, next_hop))
-                                                   for next_hop in next_hops]
-                            hosts = self.topo.get_hosts_connected_to(sw_dst)
-                            subnet = self.topo.get_host_ip(hosts[0]) + '/24'
-                            if (ecmp_grps[sw_src].get(tuple(next_hop_macs_ports), None)):
-                                ecmp_group_id = ecmp_grps[sw_src].get(tuple(next_hop_macs_ports))
-                                controller.table_add('ipv4_lpm', 'ecmp_group', [subnet], [str(ecmp_group_id), len(next_hop_macs_ports)])
-                            else:
-                                new_ecmp_grp = len(next_hop_macs_ports) + 1
-                                ecmp_grps[sw_src][tuple(next_hop_macs_ports)] = new_ecmp_grp
-                                for i, (mac, port) in enumerate(next_hop_macs_ports):
-                                    controller.table_add('ecmp_group_to_nhop', 'set_nhop', [str(new_ecmp_grp), str(i)],
-                                                         [mac, str(port)])
-                                controller.table_add('ipv4_lpm', 'ecmp_group', [subnet], [str(new_ecmp_grp), str(len(next_hop_macs_ports))])
+            ecmp_grps = {sw_name:{} for sw_name in self.topo.get_p4rtswitches().keys()}
+            for sw_name, controller in self.controllers.items():
+                for sw_dst in self.topo.get_p4rtswitches():
+                    if (sw_dst == sw_name):
+                        hosts = self.topo.get_hosts_connected_to(sw_dst)
+                        for host in hosts:
+                            host_ip = self.topo.get_host_ip(host) + '/32'
+                            host_mac = self.topo.get_host_mac(host)
+                            port = self.topo.node_to_node_port_num(sw_dst, host)
+                            print("table_add at {}:".format(sw_name))
+                            controller.table_add('ipv4_lpm', 'set_nhop', [host_ip], [host_mac, str(port)])
+                    else:
+                        hosts = self.topo.get_hosts_connected_to(sw_dst)
+                        paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+                        if len(hosts) > 0:
+                            # subnet = self.topo.get_host_ip(hosts[0]) + '/24'
+                            if (len(paths) == 1):
+                                for host in hosts:
+                                    next_hop = paths[0][1]
+                                    host_ip = self.topo.get_host_ip(host) + '/24'
+                                    next_hop_mac = self.topo.node_to_node_mac(next_hop, sw_name)
+                                    port = self.topo.node_to_node_port_num(sw_name, next_hop)
+                                    print("table_add at {}:".format(sw_name))
+                                    controller.table_add('ipv4_lpm', 'set_nhop', [host_ip], [next_hop_mac, str(port)])
+                            elif(len(paths) > 1):
+                                next_hops = [x[1] for x in paths]
+                                dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
+                                                    self.topo.node_to_node_port_num(sw_name, next_hop)) for next_hop in next_hops]
+                                for host in hosts:
+                                    host_ip = self.topo.get_host_ip(host) + '/24'
+                                    if ecmp_grps[sw_name].get(tuple(dst_macs_ports), None):
+                                        grp_id = ecmp_grps[sw_name][tuple(dst_macs_ports)]
+                                        print("table_add at {}:".format(sw_name))
+                                        controller.table_add('ipv4_lpm', 'ecmp_group', [host_ip], [str(grp_id), str(len(dst_macs_ports))])
+                                    else:
+                                        new_grp_id = len(ecmp_grps[sw_name]) + 1
+                                        ecmp_grps[sw_name][tuple(dst_macs_ports)] = new_grp_id
+                                        print("table_add at {}:".format(sw_name))
+                                        controller.table_add('ipv4_lpm', 'ecmp_group', [host_ip], [str(new_grp_id), str(len(dst_macs_ports))])
+                                        for i, (mac, port) in enumerate(dst_macs_ports):
+                                            print("table_add at {}:".format(sw_name))
+                                            controller.table_add('ecmp_group_to_nhop', 'set_nhop', [str(new_grp_id), str(i)], [mac, str(port)])
+                                
 
     def main(self):
         self.route()
