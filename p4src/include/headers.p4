@@ -3,6 +3,7 @@
 *************************************************************************/
 
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<8>  TYPE_INDUS = 0x27; 
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
@@ -32,8 +33,15 @@ header ipv4_t {
 }
 
 header indus_t {
-    bit<2>  type;
-    bit<16> token;
+    bit<16>     feature_0;
+    bit<16>     feature_1;
+    bit<16>     feature_2;
+    bit<16>     feature_3;
+    bit<16>     feature_4;
+    bit<16>     feature_5;
+}
+
+header time_t {
     bit<48> delay;
 }
 
@@ -60,11 +68,14 @@ header tcp_t{
 struct metadata {
     bit<14> ecmp_hash;
     bit<14> ecmp_group_id;
+    bit<3>  type;
 }
 
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
+    time_t       time;
+    indus_t      indus;
     tcp_t        tcp;
 }
 

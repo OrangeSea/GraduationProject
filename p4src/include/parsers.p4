@@ -26,8 +26,14 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol){
             6 : parse_tcp;
+            27: parse_indus;
             default: accept;
         }
+    }
+
+    state parse_indus {
+        packet.extract(hdr.indus);
+        transition accept;
     }
 
     state parse_tcp {
