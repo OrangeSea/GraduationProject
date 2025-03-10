@@ -31,6 +31,12 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
+header indus_t {
+    bit<2>  type;
+    bit<16> token;
+    bit<48> delay;
+}
+
 header tcp_t{
     bit<16> srcPort;
     bit<16> dstPort;

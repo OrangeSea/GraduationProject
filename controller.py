@@ -2,6 +2,8 @@ import os
 from p4utils.utils.helper import load_topo
 from p4utils.utils.sswitch_p4runtime_API import SimpleSwitchP4RuntimeAPI
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
+import redis
+import random
 
 
 class Controller(object):
@@ -13,9 +15,12 @@ class Controller(object):
         self.topo = load_topo('topology.json')
         self.controllers = {}
         self.init()
+        self.r = redis.Redis(host='localhost', port=6379, db=0)
 
     def init(self):
         self.connect_to_switches()
+        # for controller in self.controllers:
+        #     controller.set_packet_in_handler(self.parse_register)
 
     def reset_states(self):
         """Resets registers, tables, etc.
@@ -90,8 +95,37 @@ class Controller(object):
                                             controller.table_add('ecmp_group_to_nhop', 'set_nhop', [str(new_grp_id), str(i)], [mac, str(port)])
                                 
 
+    def parse_register(self, packet):
+        while True:
+            self.parse_packet(packet)
+
+    def parse_packet(self, packet):
+        # 解析以太网头部
+        eth_header = packet[:14]
+        eth_dst = eth_header[:6].hex()
+        eth_src = eth_header[6:12].hex()
+        eth_type = int.from_bytes(eth_header[12:14], byteorder='big')
+
+        # 解析 IPv4 头部
+        if eth_type == 0x0800:
+            ip_header = packet[14:34]
+            ip_src = '.'.join(map(str, ip_header[12:16]))
+            ip_dst = '.'.join(map(str, ip_header[16:20]))
+            print(f"Ethernet src: {eth_src}, dst: {eth_dst}, type: {eth_type}")
+            print(f"IPv4 src: {ip_src}, dst: {ip_dst}")
+        else:
+            print("Non-IPv4 packet received")
+
+    def handel_packet(self, packet):
+        print("Handling packet...")
+        token = random.randint(0, 65535)
+        self.r.set('token', token)
+
+
     def main(self):
         self.route()
+
+
 
 
 if __name__ == '__main__':
