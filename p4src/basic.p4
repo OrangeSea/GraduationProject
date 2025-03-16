@@ -22,7 +22,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<16>>(10) indus_features;
+    register<bit<16>>(15) indus_features;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -89,6 +89,11 @@ control MyIngress(inout headers hdr,
                     ecmp_group_to_nhop.apply();
                 }
             }
+        }
+        if (hdr.tcp.isValid() && hdr.tcp.syn == 1) {
+            hdr.indus.setValid();
+            hdr.ipv4.protocol = 27;
+            hdr.indus.feature_0 = hdr.indus.feature_0 + 1;
         }
     }
 }
