@@ -5,6 +5,8 @@ from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 import redis
 import random
 
+TRUST_LEVEL = '_T'
+COMPUTE_LEVEL = '_C'
 
 class Controller(object):
     def __init__(self):
@@ -14,13 +16,23 @@ class Controller(object):
 
         self.topo = load_topo('topology.json')
         self.controllers = {}
-        self.init()
         self.r = redis.Redis(host='localhost', port=6379, db=0)
+        self.init()
+        
+        
 
     def init(self):
         self.connect_to_switches()
         # for controller in self.controllers:
         #     controller.set_packet_in_handler(self.parse_register)
+        for sw in self.topo.get_p4rtswitches().keys():
+            hosts = self.topo.get_hosts_connected_to(sw)
+            if hosts :
+                for host in hosts:
+                    ip_addr = self.topo.get_host_ip(host)
+                    self.r.set(ip_addr + TRUST_LEVEL, 'Th')
+                    self.r.set(ip_addr + COMPUTE_LEVEL, 'Cl')
+
 
         
 
