@@ -21,6 +21,7 @@ class Controller(object):
         self.connect_to_switches()
         # for controller in self.controllers:
         #     controller.set_packet_in_handler(self.parse_register)
+
         
 
     def reset_states(self):
@@ -95,7 +96,15 @@ class Controller(object):
                                         print("table_add at {}:".format(sw_name))
                                         controller.table_add('ecmp_group_to_nhop', 'set_nhop', [str(new_grp_id), str(i)], [mac, str(port)])
                                 
+    def add_inuds_header(self):
+        self.controllers['s1'].table_add('check_is_ingress_border', 'set_is_ingress_border', ['1'])
+        self.controllers['s1'].table_add('check_is_egress_border', 'is_egress_border', ['1'])
+        self.controllers['s1'].table_add('set_indus_valid', 'set_indus_feature', ['10.2.4.2'])
 
+        self.controllers['s2'].table_add('check_is_ingress_border', 'set_is_ingress_border', ['2'])
+        self.controllers['s2'].table_add('check_is_egress_border', 'is_egress_border', ['2'])
+        self.controllers['s2'].table_add('set_indus_valid', 'set_indus_feature', ['10.1.1.2'])
+    
     def parse_register(self, packet):
         while True:
             self.parse_packet(packet)
@@ -125,6 +134,7 @@ class Controller(object):
 
     def main(self):
         self.route()
+        self.add_inuds_header()
 
 
 

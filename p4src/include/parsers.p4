@@ -27,7 +27,7 @@ parser MyParser(packet_in packet,
         transition select(hdr.ipv4.protocol){
             6 : parse_tcp;
             27: parse_indus;
-            0x11: parse_udp;
+            17: parse_udp;
             default: accept;
         }
     }

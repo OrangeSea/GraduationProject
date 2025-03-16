@@ -22,7 +22,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    // register<bit<16>>(15) indus_features;
+    register<bit<16>>(15) indus_features;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -58,8 +58,16 @@ control MyIngress(inout headers hdr,
     }
 
     action set_indus_feature() {
+        indus_features.write(0, (bit<16>)hdr.ipv4.protocol);
         hdr.indus.setValid();
         hdr.ipv4.protocol = 27;
+        bit<16> protocol;
+        indus_features.read(protocol, 0);
+        hdr.indus.feature_0 = protocol;
+    }
+
+    action set_is_ingress_border(){
+        meta.is_ingress_border = (bit<1>)1;
     }
 
     table ecmp_group_to_nhop {
@@ -93,27 +101,44 @@ control MyIngress(inout headers hdr,
             drop;
         }
         key = {
-            standard_metadata.ingress_port: exact;
+            hdr.ipv4.dstAddr: exact;
         }
         size = 1024;
         default_action = drop;
     }
 
+    table check_is_ingress_border {
+        actions = {
+            NoAction;
+            set_is_ingress_border;
+        }
+        key = {
+            standard_metadata.ingress_port: exact;
+        }
+        size = 1024;
+        default_action = NoAction;
+    }
+
     apply {
+        check_is_ingress_border.apply();
+
+        if (meta.is_ingress_border == 1) {
+            if (hdr.ipv4.isValid()) {
+                set_indus_valid.apply();
+                if (hdr.indus.isValid()) {
+
+                }
+            }
+        }
         if (hdr.ipv4.isValid()){
-            set_indus_valid.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();
                 }
             }
         }
-        if (hdr.indus.isValid()) {
-            if (hdr.tcp.isValid()) {
-                hdr.ipv4.protocol = 27;
-                hdr.indus.feature_0 = 6;
-            }
-        }
+        
+        
     }
 }
 
@@ -124,30 +149,36 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-
+    
+    register<bit<16>>(15) indus_features;
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
-    action unset_indus_feature() {
+    action is_egress_border() {
+        indus_features.write(0, (bit<16>)hdr.indus.feature_0);
         hdr.indus.setInvalid();
+        bit<16> protocol;
+        indus_features.read(protocol, 0);
+        hdr.ipv4.protocol = (bit<8>)protocol;
     }
 
-    table set_indus_invalid{
-        actions = {
-            unset_indus_feature;
-            drop;
-        }
+    table check_is_egress_border {
         key = {
-            standard_metadata.egress_spec: exact;
+            standard_metadata.egress_port: exact;
         }
+        actions = {
+            NoAction;
+            is_egress_border;
+        }
+        default_action = NoAction;
         size = 1024;
-        default_action = drop;
     }
+
 
     apply {
         if (hdr.indus.isValid()) {
-            set_indus_invalid.apply();
+            check_is_egress_border.apply();
         }
     }
 }
