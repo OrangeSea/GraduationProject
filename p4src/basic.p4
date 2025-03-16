@@ -43,7 +43,6 @@ control MyIngress(inout headers hdr,
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
-
         //set the src mac address as the previous dst, this is not correct right?
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
@@ -64,6 +63,7 @@ control MyIngress(inout headers hdr,
         bit<16> protocol;
         indus_features.read(protocol, 0);
         hdr.indus.feature_0 = protocol;
+
     }
 
     action set_is_ingress_border(){
@@ -126,7 +126,27 @@ control MyIngress(inout headers hdr,
             if (hdr.ipv4.isValid()) {
                 set_indus_valid.apply();
                 if (hdr.indus.isValid()) {
-
+                    if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) { // 前向数据包最小长度统计
+                        bit<16> fwd_packet_min = (bit<16>)standard_metadata.packet_length;
+                        bit<16> length;
+                        indus_features.read(length, 1);
+                        if (fwd_packet_min < length) {
+                            indus_features.write(1, fwd_packet_min);
+                        } else {
+                            fwd_packet_min = length;
+                        }
+                        hdr.indus.feature_1 = fwd_packet_min;
+                    } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) { // 反向数据包最小长度统计
+                        bit<16> bwd_packet_min = (bit<16>)standard_metadata.packet_length;
+                        bit<16> length;
+                        indus_features.read(length, 3);
+                        if (bwd_packet_min < length) {
+                            indus_features.write(3, bwd_packet_min);
+                        } else {
+                            bwd_packet_min = length;
+                        }
+                        hdr.indus.feature_3 = bwd_packet_min;
+                    }
                 }
             }
         }
@@ -137,8 +157,8 @@ control MyIngress(inout headers hdr,
                 }
             }
         }
-        
-        
+
+
     }
 }
 
@@ -149,7 +169,7 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    
+
     register<bit<16>>(15) indus_features;
     action drop() {
         mark_to_drop(standard_metadata);
@@ -161,6 +181,7 @@ control MyEgress(inout headers hdr,
         bit<16> protocol;
         indus_features.read(protocol, 0);
         hdr.ipv4.protocol = (bit<8>)protocol;
+        meta.is_egress_border = 1;
     }
 
     table check_is_egress_border {
