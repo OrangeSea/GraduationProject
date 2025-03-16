@@ -39,6 +39,17 @@ header indus_t {
     bit<16>     feature_3;
     bit<16>     feature_4;
     bit<16>     feature_5;
+    bit<16>     feature_6;
+    bit<16>     feature_7;
+    bit<16>     feature_8;
+    bit<16>     feature_9;
+    bit<16>     feature_10;
+    bit<16>     feature_11;
+    bit<16>     feature_12;
+    bit<16>     feature_13;
+    bit<16>     feature_14;
+    bit<8>      result  ;
+
 }
 
 header time_t {
@@ -65,10 +76,19 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+header udp_t {
+    bit<16>  src_port;
+    bit<16>  dst_port;
+    bit<16>  hdr_length;
+    bit<16>  checksum;
+}
+
 struct metadata {
     bit<14> ecmp_hash;
     bit<14> ecmp_group_id;
     bit<3>  type;
+    bit<1>  is_ingress_border;
+    bit<1>  is_egress_border;
 }
 
 struct headers {
@@ -77,5 +97,6 @@ struct headers {
     time_t       time;
     indus_t      indus;
     tcp_t        tcp;
+    udp_t        udp;
 }
 

@@ -22,7 +22,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<16>>(15) indus_features;
+    // register<bit<16>>(15) indus_features;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -57,6 +57,11 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
+    action set_indus_feature() {
+        hdr.indus.setValid();
+        hdr.ipv4.protocol = 27;
+    }
+
     table ecmp_group_to_nhop {
         key = {
             meta.ecmp_group_id:    exact;
@@ -82,18 +87,32 @@ control MyIngress(inout headers hdr,
         default_action = drop;
     }
 
+    table set_indus_valid{
+        actions = {
+            set_indus_feature;
+            drop;
+        }
+        key = {
+            standard_metadata.ingress_port: exact;
+        }
+        size = 1024;
+        default_action = drop;
+    }
+
     apply {
         if (hdr.ipv4.isValid()){
+            set_indus_valid.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();
                 }
             }
         }
-        if (hdr.tcp.isValid() && hdr.tcp.syn == 1) {
-            hdr.indus.setValid();
-            hdr.ipv4.protocol = 27;
-            hdr.indus.feature_0 = hdr.indus.feature_0 + 1;
+        if (hdr.indus.isValid()) {
+            if (hdr.tcp.isValid()) {
+                hdr.ipv4.protocol = 27;
+                hdr.indus.feature_0 = 6;
+            }
         }
     }
 }
@@ -105,8 +124,31 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    apply {
 
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    action unset_indus_feature() {
+        hdr.indus.setInvalid();
+    }
+
+    table set_indus_invalid{
+        actions = {
+            unset_indus_feature;
+            drop;
+        }
+        key = {
+            standard_metadata.egress_spec: exact;
+        }
+        size = 1024;
+        default_action = drop;
+    }
+
+    apply {
+        if (hdr.indus.isValid()) {
+            set_indus_invalid.apply();
+        }
     }
 }
 
