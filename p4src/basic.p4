@@ -6,6 +6,8 @@
 #include "include/headers.p4"
 #include "include/parsers.p4"
 
+register<bit<16>>(15) indus_features;
+
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
@@ -22,7 +24,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<16>>(15) indus_features;
+    // register<bit<16>>(15) indus_features;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -64,6 +66,8 @@ control MyIngress(inout headers hdr,
         indus_features.read(protocol, 0);
         hdr.indus.feature_0 = protocol;
 
+        indus_features.write(1, 65535);
+        indus_features.write(3, 65535);
     }
 
     action set_is_ingress_border(){
@@ -136,6 +140,10 @@ control MyIngress(inout headers hdr,
                             fwd_packet_min = length;
                         }
                         hdr.indus.feature_1 = fwd_packet_min;
+
+                        bit<16> bwd_packet_min;
+                        indus_features.read(bwd_packet_min, 3);
+                        hdr.indus.feature_3 = bwd_packet_min;
                     } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) { // 反向数据包最小长度统计
                         bit<16> bwd_packet_min = (bit<16>)standard_metadata.packet_length;
                         bit<16> length;
@@ -146,6 +154,10 @@ control MyIngress(inout headers hdr,
                             bwd_packet_min = length;
                         }
                         hdr.indus.feature_3 = bwd_packet_min;
+
+                        bit<16> fwd_packet_min;
+                        indus_features.read(fwd_packet_min, 1);
+                        hdr.indus.feature_1 = fwd_packet_min;
                     }
                 }
             }
@@ -170,13 +182,14 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
 
-    register<bit<16>>(15) indus_features;
+    // register<bit<16>>(15) indus_features;
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
     action is_egress_border() {
         indus_features.write(0, (bit<16>)hdr.indus.feature_0);
+
         hdr.indus.setInvalid();
         bit<16> protocol;
         indus_features.read(protocol, 0);
@@ -199,6 +212,8 @@ control MyEgress(inout headers hdr,
 
     apply {
         if (hdr.indus.isValid()) {
+            indus_features.write(1, (bit<16>)hdr.indus.feature_1);
+            indus_features.write(3, (bit<16>)hdr.indus.feature_3);
             check_is_egress_border.apply();
         }
     }
