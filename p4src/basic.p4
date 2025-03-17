@@ -7,6 +7,8 @@
 #include "include/parsers.p4"
 
 register<bit<16>>(15) indus_features;
+register<bit<16>>(1)   fwd_packet_cnt;
+register<bit<16>>(1)   bwd_packet_cnt;
 
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
@@ -131,7 +133,23 @@ control MyIngress(inout headers hdr,
                 set_indus_valid.apply();
                 if (hdr.indus.isValid()) {
                     if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) { // 前向数据包最小长度统计
-                        bit<16> fwd_packet_min = (bit<16>)standard_metadata.packet_length;
+                        // 统计前向数据包个数
+                        bit<16> fwd_pkt_count;
+                        fwd_packet_cnt.read(fwd_pkt_count, 0);
+                        fwd_pkt_count = fwd_pkt_count + 1;
+                        fwd_packet_cnt.write(0, fwd_pkt_count);
+                        bit<16> fwd_packet_min = 0;
+                        if (hdr.tcp.isValid()) {
+                            if (hdr.tcp.syn == 1) {
+                                hdr.indus.feature_13 = hdr.tcp.window;
+                                // 初始化前向数据包个数
+                                fwd_packet_cnt.write(0, 1);
+                            }
+                            bit<16> tcp_header_len = (bit<16>)hdr.tcp.dataOffset << 2;
+                            fwd_packet_min = (bit<16>)standard_metadata.packet_length - 34 - tcp_header_len;
+                        } else if (hdr.udp.isValid()) {
+                            fwd_packet_min = (bit<16>)standard_metadata.packet_length - 42;
+                        }
                         bit<16> length;
                         indus_features.read(length, 1);
                         if (fwd_packet_min < length) {
@@ -144,8 +162,18 @@ control MyIngress(inout headers hdr,
                         bit<16> bwd_packet_min;
                         indus_features.read(bwd_packet_min, 3);
                         hdr.indus.feature_3 = bwd_packet_min;
+
+                        bit<16> bwd_init_win_bytes;
+                        indus_features.read(bwd_init_win_bytes, 14);
+                        hdr.indus.feature_14 = bwd_init_win_bytes;
                     } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) { // 反向数据包最小长度统计
-                        bit<16> bwd_packet_min = (bit<16>)standard_metadata.packet_length;
+                        bit<16> bwd_packet_min = 0;
+                        if (hdr.tcp.isValid()) {
+                            hdr.indus.feature_14 = hdr.tcp.window;
+                            bwd_packet_min = (bit<16>)standard_metadata.packet_length - 54;
+                        } else if (hdr.udp.isValid()) {
+                            bwd_packet_min = (bit<16>)standard_metadata.packet_length - 42;
+                        }
                         bit<16> length;
                         indus_features.read(length, 3);
                         if (bwd_packet_min < length) {
@@ -158,6 +186,10 @@ control MyIngress(inout headers hdr,
                         bit<16> fwd_packet_min;
                         indus_features.read(fwd_packet_min, 1);
                         hdr.indus.feature_1 = fwd_packet_min;
+
+                        bit<16> fwd_init_win_bytes;
+                        indus_features.read(fwd_init_win_bytes, 13);
+                        hdr.indus.feature_13 = fwd_init_win_bytes;
                     }
                 }
             }
@@ -212,8 +244,23 @@ control MyEgress(inout headers hdr,
 
     apply {
         if (hdr.indus.isValid()) {
-            indus_features.write(1, (bit<16>)hdr.indus.feature_1);
-            indus_features.write(3, (bit<16>)hdr.indus.feature_3);
+            if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) {
+                indus_features.write(1, (bit<16>)hdr.indus.feature_1);
+                bit<16> length;
+                indus_features.read(length, 3);
+                hdr.indus.feature_3 = length;
+
+                // 写入FWD init win Bytes
+                indus_features.write(13, (bit<16>)hdr.indus.feature_13);
+            } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) {
+                indus_features.write(3, (bit<16>)hdr.indus.feature_3);
+                bit<16> length;
+                indus_features.read(length, 1);
+                hdr.indus.feature_1 = length;
+
+                // 写入BWD init win Bytes
+                indus_features.write(14, (bit<16>)hdr.indus.feature_14);
+            }
             check_is_egress_border.apply();
         }
     }
