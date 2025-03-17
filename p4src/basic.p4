@@ -28,6 +28,8 @@ control MyIngress(inout headers hdr,
 
     // register<bit<16>>(15) indus_features;
 
+    counter(1024, CounterType.packets) fwd_counter;
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
@@ -131,13 +133,9 @@ control MyIngress(inout headers hdr,
         if (meta.is_ingress_border == 1) {
             if (hdr.ipv4.isValid()) {
                 set_indus_valid.apply();
+                fwd_counter.count((bit<32>)standard_metadata.ingress_port);
                 if (hdr.indus.isValid()) {
                     if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) { // 前向数据包最小长度统计
-                        // 统计前向数据包个数
-                        bit<16> fwd_pkt_count;
-                        fwd_packet_cnt.read(fwd_pkt_count, 0);
-                        fwd_pkt_count = fwd_pkt_count + 1;
-                        fwd_packet_cnt.write(0, fwd_pkt_count);
                         bit<16> fwd_packet_min = 0;
                         if (hdr.tcp.isValid()) {
                             if (hdr.tcp.syn == 1) {

@@ -4,6 +4,8 @@ from p4utils.utils.sswitch_p4runtime_API import SimpleSwitchP4RuntimeAPI
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 import redis
 import random
+import time
+import threading
 
 TRUST_LEVEL = '_T'
 COMPUTE_LEVEL = '_C'
@@ -116,6 +118,20 @@ class Controller(object):
         self.controllers['s2'].table_add('check_is_ingress_border', 'set_is_ingress_border', ['2'])
         self.controllers['s2'].table_add('check_is_egress_border', 'is_egress_border', ['2'])
         self.controllers['s2'].table_add('set_indus_valid', 'set_indus_feature', ['10.1.1.2'])
+
+    def read_counter(self):
+        fwd_pkt_cnt = 0
+        bwd_pkt_cnt = 0
+        while (True):
+            x = self.controllers['s1'].counter_read('fwd_counter', 1)
+            fwd_pkt_per_sec = x[1] - fwd_pkt_cnt
+            fwd_pkt_cnt = x[1]
+            y = self.controllers['s2'].counter_read('fwd_counter', 2)
+            bwd_pkt_per_sec = y[1] - bwd_pkt_cnt
+            bwd_pkt_cnt = y[1]
+            print(f'fwd_pkt_per_sec: {fwd_pkt_per_sec}')
+            print(f'bwd_pkt_per_sec: {bwd_pkt_per_sec}')
+            time.sleep(1)
     
     def parse_register(self, packet):
         while True:
@@ -147,7 +163,8 @@ class Controller(object):
     def main(self):
         self.route()
         self.add_inuds_header()
-
+        thread = threading.Thread(target=self.read_counter)
+        thread.start()
 
 
 
