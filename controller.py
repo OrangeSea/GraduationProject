@@ -20,6 +20,20 @@ class Controller(object):
         self.topo = load_topo('topology.json')
         self.controllers = {}
         self.r = redis.Redis(host='localhost', port=6379, db=0)
+        self.s1_cli = subprocess.Popen(
+            f'simple_switch_CLI --thrift-port 9090',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        self.s2_cli = subprocess.Popen(
+            f'simple_switch_CLI --thrift-port 9091',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
         self.init()
         
         
@@ -145,13 +159,13 @@ class Controller(object):
             print(f'fwd_pkt_len_mean: {fwd_pkt_len_mean}')
             print(f'flow_pkt_per_sec: {flow_pkt_per_sec}')
 
-            self.register_write(9090, reg_name, index=5, val=flow_pkt_per_sec)
-            self.register_write(9090, reg_name, index=6, val=fwd_pkt_per_sec)
+            self.register_write(s1_port, reg_name, index=5, val=flow_pkt_per_sec)
+            self.register_write(s1_port, reg_name, index=6, val=fwd_pkt_per_sec)
 
 
-            self.register_write(9091, reg_name, index=5, val=flow_pkt_per_sec)
+            self.register_write(s2_port, reg_name, index=5, val=flow_pkt_per_sec)
             print(f's2 write flow_pkt_per_sec:{flow_pkt_per_sec}')
-            self.register_write(9091, reg_name, index=6, val=fwd_pkt_per_sec)
+            self.register_write(s2_port, reg_name, index=6, val=fwd_pkt_per_sec)
             print(f's2 write fwd_pkt_per_sec:{fwd_pkt_per_sec}')
 
 
@@ -160,21 +174,16 @@ class Controller(object):
 
     def register_write(self, sw_port, reg_name, index, val):
         command = f'register_write {reg_name} {index} {val}\n'
-
-        cli_process = subprocess.Popen(
-            f'simple_switch_CLI --thrift-port {sw_port}',
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True
-        )
-
         input = bytes(command, encoding="utf8")
+        if sw_port == 9090:
+            self.s1_cli.stdin.write(input)
+            self.s1_cli.stdin.flush()
+        elif sw_port == 9091:
+            self.s2_cli.stdin.write(input)
+            self.s2_cli.stdin.flush()
 
-        cli_process.stdin.write(input)
-        cli_process.stdin.flush()
 
-        # cli_process.kill()
+
 
     def parse_register(self, packet):
         while True:
