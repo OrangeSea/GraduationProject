@@ -1,4 +1,16 @@
 from p4utils.mininetlib.network_API import NetworkAPI
+import subprocess
+
+def start_tcpdump(interface, output_file):
+    '''
+    启动tcpdump捕获指定接口的流量
+    :param interface: 网络接口名称
+    :param output_file: 输出文件路径
+    :return:
+    '''
+    cmd = f"sudo tcpdump -i {interface} -w {output_file}"
+    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(f"tcpdump started on interface {interface}, saving to {output_file}")
 
 def main():
     net = NetworkAPI()

@@ -7,9 +7,11 @@ import random
 import time
 import threading
 import subprocess
+import logging
 
 TRUST_LEVEL = '_T'
 COMPUTE_LEVEL = '_C'
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class Controller(object):
     def __init__(self):
@@ -154,19 +156,21 @@ class Controller(object):
             bwd_pkt_cnt = y[1]
 
             flow_pkt_per_sec = fwd_pkt_per_sec + bwd_pkt_per_sec
-            print(f'fwd_pkt_per_sec: {fwd_pkt_per_sec}')
-            print(f'bwd_pkt_per_sec: {bwd_pkt_per_sec}')
-            print(f'fwd_pkt_len_mean: {fwd_pkt_len_mean}')
-            print(f'flow_pkt_per_sec: {flow_pkt_per_sec}')
+            # print(f'fwd_pkt_per_sec: {fwd_pkt_per_sec}')
+            # print(f'bwd_pkt_per_sec: {bwd_pkt_per_sec}')
+            # print(f'fwd_pkt_len_mean: {fwd_pkt_len_mean}')
+            # print(f'flow_pkt_per_sec: {flow_pkt_per_sec}')
 
             self.register_write(s1_port, reg_name, index=5, val=flow_pkt_per_sec)
+            logging.info(f'writing register {reg_name} {5}, flow_pkt_per_sec: {flow_pkt_per_sec}')
             self.register_write(s1_port, reg_name, index=6, val=fwd_pkt_per_sec)
+            logging.info(f'writing register {reg_name} {6}, fwd_pkt_per_sec: {fwd_pkt_per_sec}')
 
 
             self.register_write(s2_port, reg_name, index=5, val=flow_pkt_per_sec)
-            print(f's2 write flow_pkt_per_sec:{flow_pkt_per_sec}')
+            logging.info(f'writing register {reg_name} {5}, flow_pkt_per_sec: {flow_pkt_per_sec}')
             self.register_write(s2_port, reg_name, index=6, val=fwd_pkt_per_sec)
-            print(f's2 write fwd_pkt_per_sec:{fwd_pkt_per_sec}')
+            logging.info(f'writing register {reg_name} {6}, fwd_pkt_per_sec: {fwd_pkt_per_sec}')
 
 
 
