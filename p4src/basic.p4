@@ -134,6 +134,14 @@ control MyIngress(inout headers hdr,
             if (hdr.ipv4.isValid()) {
                 set_indus_valid.apply();
                 fwd_counter.count((bit<32>)standard_metadata.ingress_port);
+                // 读取数据流中每秒数据包个数
+                bit<16> flow_pkt_per_sec;
+                indus_features.read(flow_pkt_per_sec, 5);
+                hdr.indus.feature_5 = flow_pkt_per_sec;
+                // 读取前向数据流中每秒数据包个数
+                bit<16> fwd_pkt_per_sec;
+                indus_features.read(fwd_pkt_per_sec, 6);
+                hdr.indus.feature_6 = fwd_pkt_per_sec;
                 if (hdr.indus.isValid()) {
                     if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) { // 前向数据包最小长度统计
                         bit<16> fwd_packet_min = 0;

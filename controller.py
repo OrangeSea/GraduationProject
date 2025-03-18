@@ -6,6 +6,7 @@ import redis
 import random
 import time
 import threading
+import subprocess
 
 TRUST_LEVEL = '_T'
 COMPUTE_LEVEL = '_C'
@@ -120,19 +121,61 @@ class Controller(object):
         self.controllers['s2'].table_add('set_indus_valid', 'set_indus_feature', ['10.1.1.2'])
 
     def read_counter(self):
+        s1_port = 9090
+        s2_port = 9091
+        reg_name = 'indus_features'
+
         fwd_pkt_cnt = 0
         bwd_pkt_cnt = 0
+        fwd_pkt_len_mean = 0
+        flow_pkt_per_sec = 0
         while (True):
             x = self.controllers['s1'].counter_read('fwd_counter', 1)
             fwd_pkt_per_sec = x[1] - fwd_pkt_cnt
             fwd_pkt_cnt = x[1]
+            if (x[1] != 0) :
+                fwd_pkt_len_mean = int(x[0] / x[1])
             y = self.controllers['s2'].counter_read('fwd_counter', 2)
             bwd_pkt_per_sec = y[1] - bwd_pkt_cnt
             bwd_pkt_cnt = y[1]
+
+            flow_pkt_per_sec = fwd_pkt_per_sec + bwd_pkt_per_sec
             print(f'fwd_pkt_per_sec: {fwd_pkt_per_sec}')
             print(f'bwd_pkt_per_sec: {bwd_pkt_per_sec}')
+            print(f'fwd_pkt_len_mean: {fwd_pkt_len_mean}')
+            print(f'flow_pkt_per_sec: {flow_pkt_per_sec}')
+
+            self.register_write(9090, reg_name, index=5, val=flow_pkt_per_sec)
+            self.register_write(9090, reg_name, index=6, val=fwd_pkt_per_sec)
+
+
+            self.register_write(9091, reg_name, index=5, val=flow_pkt_per_sec)
+            print(f's2 write flow_pkt_per_sec:{flow_pkt_per_sec}')
+            self.register_write(9091, reg_name, index=6, val=fwd_pkt_per_sec)
+            print(f's2 write fwd_pkt_per_sec:{fwd_pkt_per_sec}')
+
+
+
             time.sleep(1)
-    
+
+    def register_write(self, sw_port, reg_name, index, val):
+        command = f'register_write {reg_name} {index} {val}\n'
+
+        cli_process = subprocess.Popen(
+            f'simple_switch_CLI --thrift-port {sw_port}',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+
+        input = bytes(command, encoding="utf8")
+
+        cli_process.stdin.write(input)
+        cli_process.stdin.flush()
+
+        # cli_process.kill()
+
     def parse_register(self, packet):
         while True:
             self.parse_packet(packet)
