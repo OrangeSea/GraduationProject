@@ -70,8 +70,8 @@ control MyIngress(inout headers hdr,
         indus_features.read(protocol, 0);
         hdr.indus.feature_0 = protocol;
 
-        indus_features.write(1, 65535);
-        indus_features.write(3, 65535);
+        // indus_features.write(1, 65535);
+        // indus_features.write(3, 65535);
     }
 
     action set_is_ingress_border(){
@@ -198,6 +198,52 @@ control MyIngress(inout headers hdr,
                         hdr.indus.feature_13 = fwd_init_win_bytes;
                     }
                 }
+                // 直接从寄存器中读取特征值
+                bit<16> feature;
+                indus_features.read(feature, 0);
+                hdr.indus.feature_0 = feature;
+
+                indus_features.read(feature, 1);
+                hdr.indus.feature_1 = feature;
+
+                indus_features.read(feature, 2);
+                hdr.indus.feature_2 = feature;
+
+                indus_features.read(feature, 3);
+                hdr.indus.feature_3 = feature;
+
+                indus_features.read(feature, 4);
+                hdr.indus.feature_4 = feature;
+
+                indus_features.read(feature, 5);
+                hdr.indus.feature_5 = feature;
+
+                indus_features.read(feature, 6);
+                hdr.indus.feature_6 = feature;
+
+                indus_features.read(feature, 7);
+                hdr.indus.feature_7 = feature;
+
+                indus_features.read(feature, 8);
+                hdr.indus.feature_8 = feature;
+
+                indus_features.read(feature, 9);
+                hdr.indus.feature_9 = feature;
+
+                indus_features.read(feature, 10);
+                hdr.indus.feature_10 = feature;
+
+                indus_features.read(feature, 11);
+                hdr.indus.feature_11 = feature;
+
+                indus_features.read(feature, 12);
+                hdr.indus.feature_12 = feature;
+
+                indus_features.read(feature, 13);
+                hdr.indus.feature_13 = feature;
+
+                indus_features.read(feature, 14);
+                hdr.indus.feature_14 = feature;
             }
         }
         if (hdr.ipv4.isValid()){
@@ -250,23 +296,23 @@ control MyEgress(inout headers hdr,
 
     apply {
         if (hdr.indus.isValid()) {
-            if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) {
-                indus_features.write(1, (bit<16>)hdr.indus.feature_1);
-                bit<16> length;
-                indus_features.read(length, 3);
-                hdr.indus.feature_3 = length;
+            // if (hdr.ipv4.srcAddr == 0x0a010102 && hdr.ipv4.dstAddr == 0x0a020402) {
+            //     indus_features.write(1, (bit<16>)hdr.indus.feature_1);
+            //     bit<16> length;
+            //     indus_features.read(length, 3);
+            //     hdr.indus.feature_3 = length;
 
-                // 写入FWD init win Bytes
-                indus_features.write(13, (bit<16>)hdr.indus.feature_13);
-            } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) {
-                indus_features.write(3, (bit<16>)hdr.indus.feature_3);
-                bit<16> length;
-                indus_features.read(length, 1);
-                hdr.indus.feature_1 = length;
+            //     // 写入FWD init win Bytes
+            //     indus_features.write(13, (bit<16>)hdr.indus.feature_13);
+            // } else if (hdr.ipv4.srcAddr == 0x0a020402 && hdr.ipv4.dstAddr == 0x0a010102) {
+            //     indus_features.write(3, (bit<16>)hdr.indus.feature_3);
+            //     bit<16> length;
+            //     indus_features.read(length, 1);
+            //     hdr.indus.feature_1 = length;
 
-                // 写入BWD init win Bytes
-                indus_features.write(14, (bit<16>)hdr.indus.feature_14);
-            }
+            //     // 写入BWD init win Bytes
+            //     indus_features.write(14, (bit<16>)hdr.indus.feature_14);
+            // }
             check_is_egress_border.apply();
         }
     }

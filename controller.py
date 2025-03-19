@@ -137,6 +137,10 @@ class Controller(object):
         self.controllers['s2'].table_add('set_indus_valid', 'set_indus_feature', ['10.1.1.2'])
 
     def read_counter(self):
+        '''
+        read counter and write them back to register
+        :return:
+        '''
         s1_port = 9090
         s2_port = 9091
         reg_name = 'indus_features'
@@ -187,8 +191,6 @@ class Controller(object):
             self.s2_cli.stdin.flush()
 
 
-
-
     def parse_register(self, packet):
         while True:
             self.parse_packet(packet)
@@ -219,8 +221,8 @@ class Controller(object):
     def main(self):
         self.route()
         self.add_inuds_header()
-        thread = threading.Thread(target=self.read_counter)
-        thread.start()
+        # thread = threading.Thread(target=self.read_counter)
+        # thread.start()
 
 
 
