@@ -4,6 +4,7 @@ import logging
 import time
 import redis
 
+CREDIT_VALUE_MAX = 30
 r = redis.Redis(host='localhost', port=6379, db=0)
 
 db_config = {
@@ -89,17 +90,18 @@ def insert_malicious(host_id, data):
             connection.close()
             logging.info('Connection returned to the pool.')
 
-def insert_normal(host_id, data):
+def insert_normal(host_id, time_stamp):
     normal_table_name = f'host_normal_behavior_{host_id}'
     insert_query = f"""
     INSERT INTO {normal_table_name} (last_penalty_index, timestamp)
     VALUES (%s, %s)
     """
-
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
-
+        last_penalty_index = r.get('h' + str(host_id) + "_last_normal_index")
+        last_penalty_index = int(last_penalty_index)
+        data = [(last_penalty_index, time_stamp)]
         for record in data:
             cursor.execute(insert_query, record)
 
@@ -115,22 +117,22 @@ def insert_normal(host_id, data):
             logging.info('Connection returned to the pool.')
 
 def query_last_penakty_index(host_id):
+    last_penalty_index = 0
     normal_table_name = f'host_normal_behavior_{host_id}'
     query = f"""
-    SELECT last_penalty_index from {normal_table_name} ORDER BY timestamp DESC
+    SELECT last_penalty_index from {normal_table_name} ORDER BY timestamp DESC LIMIT 1
     """
-
     try:
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
         cursor.execute(query)
         rows = cursor.fetchall()
         if not rows:
-            last_penalty_index = 0
+            return last_penalty_index
         else:
-            last_penalty_index = rows[0][0]  # 获取最后一行的 last_penalty_index
-            logging(f'Last penalty index:{last_penalty_index}')
-        return last_penalty_index
+            last_penalty_index = rows[0][0] # 获取最后一行的 last_penalty_index
+            print(f'last_penalty_index:{last_penalty_index}')
+            return last_penalty_index
     except mysql.connector.Error as e:
         logging.error(f'Database error:{e}')
         logging.exception('Exception details:')
@@ -141,6 +143,11 @@ def query_last_penakty_index(host_id):
             logging.info('Connection returned to the pool.')
 
 def calculate_CrN(host_id):
+    '''
+    返回惩罚函数计算结果
+    :param host_id:
+    :return:
+    '''
     CrN = 0
     malicious_table_name = f'host_malicious_behavior_{host_id}'
     normal_table_name = f'host_normal_behavior_{host_id}'
@@ -201,7 +208,7 @@ def calculate_CrP(host_id):
             sum = result[0][0]
             last_normal_behavior_index = query_last_penakty_index(host_id)
             logging.info(f'last_normal_behavior_index: {last_normal_behavior_index}')
-            return sum - last_normal_behavior_index
+            return min(sum - last_normal_behavior_index, CREDIT_VALUE_MAX)
     except mysql.connector.Error as e:
         logging.error(f'Database error:{e}')
         logging.exception('Exception details:')
@@ -212,7 +219,6 @@ def calculate_CrP(host_id):
             logging.info('Connection returned to the pool.')
 
 
-
 if __name__ == '__main__':
     host_id = 1
     timestamp = time.time()
@@ -221,7 +227,7 @@ if __name__ == '__main__':
     # insert_malicious(host_id, data)
 
     # data = [(0, formatted_time)]
-    # insert_normal(1, data)
+    # insert_normal(1, formatted_time)
 
     # query_last_penakty_index(host_id)
 
@@ -229,6 +235,8 @@ if __name__ == '__main__':
     print(f'CrN = {CrN}, last_normal_behavior_index:{last_normal_behavior_index}')
     CrP = calculate_CrP(host_id)
     print(f'CrP = {CrP}')
+    Cr = CrP - CrN
+    print(f'Cr = {Cr}')
 
 
 
