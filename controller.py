@@ -8,6 +8,7 @@ import time
 import threading
 import subprocess
 import logging
+from CreateHistoricalBehaviorTable import *
 
 TRUST_LEVEL = '_T'
 COMPUTE_LEVEL = '_C'
@@ -51,7 +52,8 @@ class Controller(object):
                     ip_addr = self.topo.get_host_ip(host)
                     self.r.set(ip_addr + TRUST_LEVEL, 'Th')
                     self.r.set(ip_addr + COMPUTE_LEVEL, 'Cl')
-
+                    host_id = int(host[1:])
+                    create_table_for_host(host_id)
 
         
 

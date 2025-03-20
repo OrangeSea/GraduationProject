@@ -3,6 +3,12 @@ from p4utils.utils.sswitch_p4runtime_API import SimpleSwitchP4RuntimeAPI
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 import os
 
+features = ['protocol', 'fwd_pkt_len_min', 'fwd_pkt_len_mean', 'bwd_pkt_len_min',
+            'bwd_pkt_len_std', 'flow_pkts_s', 'fwd_pkts_s', 'pkt_len_mean', 'pkt_len_std',
+            'fin_flag_cnt', 'rst_flag_cnt', 'pkt_size_avg', 'fwd_seg_size_avg', 'init_fwd_win_byts',
+            'init_bwd_win_byts'
+            ]
+
 class Utils:
     def __init__(self):
         if not os.path.exists('topology.json'):
@@ -74,28 +80,29 @@ class Utils:
     def learn(self, learning_data):
 
         print(learning_data)
-            # print("mac: %012X ingress_port: %s " % (mac_addr, ingress_port))
 
     def unpack_digest(self, dig_list):
         learning_data = []
         for dig in dig_list.data:
-            mac_addr = int.from_bytes(dig.struct.members[0].bitstring, byteorder='big')
-            ingress_port = int.from_bytes(dig.struct.members[1].bitstring, byteorder='big')
-            a3 = int.from_bytes(dig.struct.members[2].bitstring, byteorder='big')
-            a4 = int.from_bytes(dig.struct.members[3].bitstring, byteorder='big')
-            a5 = int.from_bytes(dig.struct.members[4].bitstring, byteorder='big')
-            a6 = int.from_bytes(dig.struct.members[5].bitstring, byteorder='big')
-            a7 = int.from_bytes(dig.struct.members[6].bitstring, byteorder='big')
-            a8 = int.from_bytes(dig.struct.members[7].bitstring, byteorder='big')
-            a9 = int.from_bytes(dig.struct.members[8].bitstring, byteorder='big')
-            a10 = int.from_bytes(dig.struct.members[9].bitstring, byteorder='big')
-            a11 = int.from_bytes(dig.struct.members[10].bitstring, byteorder='big')
-            a12 = int.from_bytes(dig.struct.members[11].bitstring, byteorder='big')
-            a13 = int.from_bytes(dig.struct.members[12].bitstring, byteorder='big')
-            a14 = int.from_bytes(dig.struct.members[13].bitstring, byteorder='big')
-            a15 = int.from_bytes(dig.struct.members[14].bitstring, byteorder='big')
+            protocol = int.from_bytes(dig.struct.members[0].bitstring, byteorder='big')
+            fwd_pkt_len_min = int.from_bytes(dig.struct.members[1].bitstring, byteorder='big')
+            fwd_pkt_len_mean = int.from_bytes(dig.struct.members[2].bitstring, byteorder='big')
+            bwd_pkt_len_min = int.from_bytes(dig.struct.members[3].bitstring, byteorder='big')
+            bwd_pkt_len_std = int.from_bytes(dig.struct.members[4].bitstring, byteorder='big')
+            flow_pkts_s = int.from_bytes(dig.struct.members[5].bitstring, byteorder='big')
+            fwd_pkts_s = int.from_bytes(dig.struct.members[6].bitstring, byteorder='big')
+            pkt_len_mean = int.from_bytes(dig.struct.members[7].bitstring, byteorder='big')
+            pkt_len_std = int.from_bytes(dig.struct.members[8].bitstring, byteorder='big')
+            fin_flag_cnt = int.from_bytes(dig.struct.members[9].bitstring, byteorder='big')
+            rst_flag_cnt = int.from_bytes(dig.struct.members[10].bitstring, byteorder='big')
+            pkt_size_avg = int.from_bytes(dig.struct.members[11].bitstring, byteorder='big')
+            fwd_seg_size_avg = int.from_bytes(dig.struct.members[12].bitstring, byteorder='big')
+            init_fwd_win_byts = int.from_bytes(dig.struct.members[13].bitstring, byteorder='big')
+            init_bwd_win_byts = int.from_bytes(dig.struct.members[14].bitstring, byteorder='big')
 
-            learning_data.append((mac_addr, ingress_port, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15))
+            learning_data.append((protocol, fwd_pkt_len_min, fwd_pkt_len_mean, bwd_pkt_len_min, bwd_pkt_len_std,
+                                  flow_pkts_s, fwd_pkts_s, pkt_len_mean, pkt_len_std, fin_flag_cnt,
+                                  rst_flag_cnt, pkt_size_avg, fwd_seg_size_avg, init_fwd_win_byts, init_bwd_win_byts))
         return learning_data
 
 if __name__ == '__main__':
