@@ -83,12 +83,31 @@ header udp_t {
     bit<16>  checksum;
 }
 
+struct faeture_t {
+    bit<16> protocol            ;
+    bit<16> fwd_pkt_len_min     ;
+    bit<16> fwd_pkt_len_mean    ;
+    bit<16> bwd_pkt_len_min     ;
+    bit<16> bwd_pkt_len_std     ;
+    bit<16> flow_pkts_s         ;
+    bit<16> fwd_pkts_s          ;
+    bit<16> pkt_len_mean        ;
+    bit<16> pkt_len_std         ;
+    bit<16> fin_flag_cnt        ;
+    bit<16> rst_flag_cnt        ;
+    bit<16> pkt_size_avg        ;
+    bit<16> fwd_seg_size_avg    ;
+    bit<16> init_fwd_win_byts   ;
+    bit<16> init_bwd_win_byts   ;
+}
+
 struct metadata {
-    bit<14> ecmp_hash;
-    bit<14> ecmp_group_id;
-    bit<3>  type;
-    bit<1>  is_ingress_border;
-    bit<1>  is_egress_border;
+    bit<14>     ecmp_hash;
+    bit<14>     ecmp_group_id;
+    bit<3>      type;
+    bit<1>      is_ingress_border;
+    bit<1>      is_egress_border;
+    faeture_t   feature;
 }
 
 struct headers {

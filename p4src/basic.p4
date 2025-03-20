@@ -78,6 +78,26 @@ control MyIngress(inout headers hdr,
         meta.is_ingress_border = (bit<1>)1;
     }
 
+    action set_feature2digest() {
+        meta.feature.protocol          = hdr.indus.feature_0    ;
+        meta.feature.fwd_pkt_len_min   = hdr.indus.feature_1    ;
+        meta.feature.fwd_pkt_len_mean  = hdr.indus.feature_2    ;
+        meta.feature.bwd_pkt_len_min   = hdr.indus.feature_3    ;
+        meta.feature.bwd_pkt_len_std   = hdr.indus.feature_4    ;
+        meta.feature.flow_pkts_s       = hdr.indus.feature_5    ;
+        meta.feature.fwd_pkts_s        = hdr.indus.feature_6    ;
+        meta.feature.pkt_len_mean      = hdr.indus.feature_7    ;
+        meta.feature.pkt_len_std       = hdr.indus.feature_8    ;
+        meta.feature.fin_flag_cnt      = hdr.indus.feature_9    ;
+        meta.feature.rst_flag_cnt      = hdr.indus.feature_10   ;
+        meta.feature.pkt_size_avg      = hdr.indus.feature_11   ;
+        meta.feature.fwd_seg_size_avg  = hdr.indus.feature_12   ;
+        meta.feature.init_fwd_win_byts = hdr.indus.feature_13   ;
+        meta.feature.init_bwd_win_byts = hdr.indus.feature_14   ;
+
+        digest(1, meta.feature);
+    }
+
     table ecmp_group_to_nhop {
         key = {
             meta.ecmp_group_id:    exact;
@@ -244,6 +264,9 @@ control MyIngress(inout headers hdr,
 
                 indus_features.read(feature, 14);
                 hdr.indus.feature_14 = feature;
+
+                set_feature2digest();
+
             }
         }
         if (hdr.ipv4.isValid()){
