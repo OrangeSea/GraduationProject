@@ -8,7 +8,7 @@ import time
 import threading
 import subprocess
 import logging
-from CreateHistoricalBehaviorTable import *
+from SafetyLevelCalculation import *
 
 TRUST_LEVEL = '_T'
 COMPUTE_LEVEL = '_C'
